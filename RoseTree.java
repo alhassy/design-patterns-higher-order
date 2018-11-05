@@ -8,7 +8,6 @@ import java.util.ArrayList;
 // In Java, a class or interface with a single method can use lambda expressions
 // as in `x -> { return 3*x; }`, where the {return} is only needed for complex bodies.
 
-@FunctionalInterface
 interface Function<Src,Tgt>
 {
     public Tgt apply(Src s);
@@ -46,6 +45,7 @@ class ListIterator<T> implements Iterator<T>
 
 // Iterate over all subtrees, including sub-sub-trees, etc, down to leafs are included.
 //
+// (Breadth-first!
 class TreeIterator<T> implements Iterator<T>
 {
     Stack<Iterator<RoseTree<T>>> unvisited = new Stack();

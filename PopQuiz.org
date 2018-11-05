@@ -24,7 +24,7 @@
 
 Define the following terms:
 
-+ Design pattern ::
++ Design pattern :: ?
 
   #+LaTeX: \vspace{3em}
 
@@ -127,7 +127,7 @@ class EitherIterator implements Iterator{
 
 #+END_SRC
 
-Hint the latter two can be defined as one-liners ;-)
+Hint the latter two can be defined as two-liners ;-)
 
 
 * COMMENT footer

@@ -1,11 +1,13 @@
+-- Breadth-first preorder for multibranching trees, “rose trees”.
+
 data Tree a = MkTree {value :: a, children :: [Tree a] }
 
 instance Show a => Show (Tree a) where
   show (MkTree v cs) = show v ++ "\n" ++ concatMap (\c -> "  " ++ show c) cs
 
 preorder :: Tree a -> [a]
-preorder (MkTree v []) = [v] 
-preorder (MkTree v cs) = v : (concat (map preorder cs))
+preorder (MkTree v cs) = v : concatMap preorder cs
+-- Consequently, preorder (MkTree v []) = [v]
 
 {-
               1 → 2 → ⟨21, 22, 23⟩
@@ -16,8 +18,8 @@ preorder (MkTree v cs) = v : (concat (map preorder cs))
 test :: Tree String
 test = MkTree "1"
        [
-         MkTree "  2"  [ MkTree "    21" [], MkTree "    22" [], MkTree "    23" []]
-       , MkTree "  3"  [ MkTree "    31" [], MkTree "    4" [node "     341", node "     342"]]
-       , MkTree "  5"  []
+         MkTree "  2"  [ node "    21", node "    22", node "    23"]
+       , MkTree "  3"  [ node "    31", MkTree "    4" [node "     341", node "     342"]]
+       , node "  5"
        ]
        where node n = MkTree n [] 
