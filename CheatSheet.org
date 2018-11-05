@@ -1,0 +1,450 @@
+#+TITLE: ``Design Patterns as Higher-Order Datatype-Generic Programs''
+#+SUBTITLE: Discussion Sheet
+# DATE: << Spring 2018 >>
+# When we don't provide a date, one is provided for us.
+#+AUTHOR: [[http://www.cas.mcmaster.ca/~alhassm/][Musa Al-hassy]] 
+#+EMAIL: alhassy@gmail.com
+#+DESCRIPTION: This document is written by Musa Al-hassy for his learning in the spring of 2018.
+#+STARTUP: hideblocks
+#+STARTUP: overview
+#+TODO: BEGIN-IGNORE(b) END-IGNORE(e) } | DONE(d)
+#+INCLUDE: ~/Dropbox/MyUnicodeSymbols.org
+#+INCLUDE: CheatSheet/CheatSheetSetup.org
+
+* Repo link :ignore:
+
+\vspace{-7.5em}
+\hspace{8em}
+#+begin_tiny
+  https://github.com/alhassy/design-patterns-higher-order
+#+end_tiny
+\vspace{8em}
+
+* Introduction
+
++ Design patterns are reusable software abstractions that tend
+  to be presented extra-linguistically as prose or pictures,
+  yet with a sufficiently powerful type-system they can be expressed
+  directly for immediate reuse by instantiation.
+
++ What is required are 
+  /higher-order/ --parametrisation by code-- and
+  /datatype-generic/ --parametrisation by type constructor, the shape of data.
+  
++  Common features in functional languages
+  & can be simulated in existing languages.
+
+* How do we display menus from distinct cafes?
+
+# Precise of ambient plot of chapter 9 from Head First Design Patterns.
+
+Suppose two cafes, a pancake house and a lunch diner, are merging into one cafe.
+Thinking of each as Java classes, we can print their menus by iterating over
+their items and processing them somehow. Suppose that one uses arrays and the other
+uses hashmaps, and they have differently named methods that must be used to extract
+the menu printing information. We can be more uniform by asking them to implement
+the /interface of tools need for the processing/, then we invoke this processing in
+two iteration loops. We can reduce the loops to two method calls by 
+/encapsulating iteration control flow/ --*iterator*--
+and using that in the processing method. Importantly, using the iterator hides the
+particular arrays and hashmaps implementations. /Program to an interface rather than to an implementation!/
+
+#+LaTeX: \vspace{1em}
+
+Later on, an evening cafe wants to merge in so we resuest it implement the two interfaces
+--the one for processing and the other for iteration-- then invoke the processing method 3 times.
+
+#+LaTeX: \vspace{1em}
+
+Later on, the evening cafe wants to introduce a dessert sub-menu! Our previous attempt wont work
+with minor additions. This can get even worse if more cafes join in, then service new sub-menus!
+We want to be able to treat menu items, menus, submenus, subsubmenus, etc, uniformly.
+Enter the composite pattern: We use a tree structure.
+This pattern is used for modelling recursive, hierarchical, structures in a uniform fashion.
+
+#+LaTeX: \vspace{1em}
+Suppose we now want to traverse our menus and the deeply nested an item
+is, the most costly it should be: In particular, we want to increase cost of an item by its depth.
+Iteration loses the `depth structure', we need to recursively pattern match
+--enter the visitor pattern!
+
+#+LaTeX: \vspace{1em}
+
+In the same vein, the control flow, the process, of building an object can be encapsulted
+by the Builder pattern: Make an object, the builder, that has methods to take arguments
+necessary to build an object. One then makes a builder, provides arguments /as they become available/
+then asks the builder to actually produce the object. Hence, this can provide a sort of curried intilisation of an object. Neato!
+
+* Parametrisation
+
++ Design patterns are patterns in program structure.
+
++ They can be seen as program schemes, capturing commonalities
+  in the large-scale structure of programs and abstracting from
+  differences in the small-scale structure.
+
+  That is, operations on programs!
+
++ E.g., Common programs can be rendered as loops, but a loop is a particular
+  pattern that traverses some input stream, possibly indirectly, and so
+  the notion of traversals, or `folds', is the essentially pattern here
+  and it's instantiated by picking a `body' for the loop --/higher-order!/
+  
+  What differs between traversals/loops/folds is the /shape/ of the data they operate on
+  ---/datatype genericity!/
+
++ /Data structure determines program structure!/
+
+  Hence we abstract away the structure by ~s~ --such as “pairs of” or “lists of”--
+  over an element type ~a~ --such as integers of strings, the recursive nature of ~s~
+  is captured by in the definition of ~Fix~ --which may be infinite due to laziness.
+  #+BEGIN_SRC haskell
+data Fix s a = In { out :: s a (Fix s a) }
+
+data Either     a b = Left a  | Right b
+data MaybePair  a b = Nothing | Just a b
+data EitherList a b = Leaf a  | Just [b]
+
+data List a  = Fix MaybePair a
+data ℕ      = Fix (Either ()) a
+data Tree a  = Fix EitherList a
+-- ≅ (Leaf a | Branches [Tree a]) ≅ (MkTree a [Tree a])
+#+END_SRC
+
+* `Origami' Patterns
+
++ Iterator  :: Iteration control flow
+  - FP :: Internal iterator $\leq$ functor's ~fmap~.
+      \newline External iterator = a ~toList~ function.
+
+  # - For sequential access to the elements of a composite;
+  # - Treat a composite as nothing more than a container of values.
+  - That is, we provide a view of the data as a list of elements.
+    #+BEGIN_SRC haskell
+    contents :: Bifunctor s ⇒ (s a (List a) → List a) → Fix s a → List a
+    contents combiner (In x) = combiner (bimap id (contents combiner) x)    
+    -- i.e., contents combiner = fold combiner
+    #+END_SRC
+
+  # Passing different combiners
+  #    allows the same COMPOSITE to yield its elements in different
+  #    orders; for example, a tree-shaped container could support both
+  #    preorder and postorder traversal. 
+
+   #   On the other hand, it is clumsy
+   #   always to have to specify the combiner. One could specify it once
+   #   and for all, in the class Bifunctor, in effect making it another
+   #   datatype-generic operation parametrized by the shape s.
+    
+   # An internal ITERATOR is basically a map operation, iterating
+   # over a collection and yielding one of the same shape but with
+   # different or modified elements; it therefore supports write access
+   # to the collection as well as read access. In HODGP, we can give a
+   # single generic definition of this.
+   # map ::Bifunctor s ⇒
+   # (a → b) → Fix s a → Fix s b
+   # map f = In · bimap f (map f)· out
+   # This is in contrast with the object-oriented approach, in which
+   # Iterator implementations are datatype-specific. Note also that the
+   # HODGP version is more general than the OO version, because it
+   # can return a collection of elements of a different type.
+   
++ Composite :: Multibranching hierarchies; uniformal treatment of sub-trees and leafs.
+  - FP :: ~RoseTree a~ where both ~a~ and ~RoseTree a~ implement a common typeclass, 
+    say ~Component~, thereby providing uniform treatment of the two.
+
+    - This corresponds to ~Fix~.
+
++ Visitor ::  Provides structured traversal of a composite;
+  - Actually take into consideration the shape of the container.
+  - An example would be ~fold~.
+
++ Builder   :: Curried object construction
+  - FP :: Currying, partially evaluating functions, ~unfold~:
+
+   #+BEGIN_SRC haskell 
+   unfold :: Bifunctor s ⇒ (b → s a b) → b → Fix s a
+   unfold f = In · bimap id (unfold f)·f
+   #+END_SRC
+
+** COMMENT More on builder
+
+   + BUILDER, to generate a composite structure.
+
+   The standard protocol for the BUILDER pattern involves a Director
+   sending Parts one by one to a Builder for it to assemble, and then
+   retrieving from the Builder a Product. Thus, the product is assembled
+   in a step-by-step fashion, but is unavailable until assembly is
+   complete. With lazy evaluation, we can in some circumstances construct
+   the Product incrementally: we can yield access to the root
+   of the product structure while continuing to assemble its substructures.
+   In the case that the data structure is assembled in a regular
+   fashion, this corresponds in the HODGP style to an unfold operation.
+
+
+* newpage                                                    :ignore:
+  \newpage
+
+
+
+* Bifunctors
+
+Not all shapes can be fixed, we look at those that can “identify their elements”
+--the /bifunctors/.
+#+BEGIN_SRC haskell
+class Bifunctor s where
+  bimap :: (a → c) → (b → d) → s a b → s c d
+  -- Lift functions to act onto the shapes.
+
+instance Bifunctor Either where
+  bimap l r (Left x)  = Left (l x)
+  bimap l r (Right x) = Right (r x)
+#+END_SRC
+
+# ~bimap~ definitions are usually forced by typing conditions --otherwise they're `unnatural'--
+# and as such can be automated --c.f., Generic Haskell.
+
+# The type signature of the operator bimap is datatype-generic, since
+# it is parameterized by the shape s of the data.
+
+#+BEGIN_SRC haskell
+map :: Bifunctor s ⇒ (a → b) → Fix s a → Fix s b
+map f (In x) = In (bimap f (map f) x)
+
+fold :: Bifunctor s ⇒ (s a b → b) → (Fix s a → b)
+fold f (In x) = f (bimap id (fold f) x)      
+
+unfold :: Bifunctor s ⇒ (b → s a b) → (b → Fix s a)
+unfold f b = In (bimap id (unfold f) (f b))
+#+END_SRC
+#
+# -- The previous two are duals, since pointfree:
+# -- dual (f ∘ bimap id (fold f) ∘ out) = In ∘ bimap id (unfold f) ∘ f
+
+
+# hylo :: Bifunctor s ⇒
+# (b → s a b) → (s a c → c) → b → c
+# hylo f g = g · bimap id (hylo f g)· f
+
++ The datatype-generic definitions are surprisingly short! 
+# shorter even than datatype-specific ones would be. 
++ The structure becomes much clearer with the higher level of abstraction. 
+
+# In particular, the duality between fold and unfold is obvious.
+
++ In Java, we cannot parameterise on a type constructor; here is an un-useful approximation.
+#+BEGIN_SRC java
+interface BiFunctor<A,B,C,D, FromInstanceOnAB, ToInstanceOnCD> 
+{
+    ToInstanceOnCD bimap(FromInstanceOnAB sab, Function<A,C> f, Function<B, D> g);
+}
+#+END_SRC
+
+* The Composite Pattern
+
++ The Composite Pattern :: allows you to compose objects into tree structures to
+  represent part-whole hierarchies. Composite lets clients treat individual objects
+  and compositions of objects uniformly --by having them both implement an interface, say ~Components~,
+  supporting desired operations-- thereby ignoring the differences between 
+  compositions [subtrees] and individuals [leafs]: That is, no having to pattern match, say by ~if~'s,
+  of whether a component is a leaf or a sub-tree to ensure we're calling the right methods.
+
+#+LaTeX: \vspace{1em}
+
+A composite contains components, which may be leafs or composites. A recursive definition.
+The composite pattern handles child management and leaf operations thereby trading 
+single responsibility for transparency: The ability to treat components uniformly.
+
+
+
+* Sources Consulted
+
++ [[http://www.cs.ox.ac.uk/jeremy.gibbons/publications/hodgp.pdf][Design Patterns as Higher-Order Datatype-Generic Programs]]
++ Head First Design Patterns, in Java
++ [[https://gist.github.com/jooyunghan/ba5812d8eccb4dd1147f][Example Implementation of Rose Trees]]
++ [[https://dl.acm.org/citation.cfm?id=1863507][Reason isomorphically!]]
+
+* Functors ≅ The Iterator Pattern ... almost
+
++ The Iterator Pattern :: provides a way to access the elements of an aggregate
+  object sequentially without exposing its underlying representation.
+
+#+LaTeX: \vspace{1em}
+
+It places the task of traversal on the iterator object, not on the aggregate,
+which simplifies the aggregate interface and implementation, and places the
+responsibility where it should be.
+
+#+BEGIN_SRC java
+interface Iterator<T> {
+    boolean hasNext();    // Are there more elements to iterate over?
+    T       next();       // Actually obtain the next element of type T.
+
+    // The above suffices as an external iterator.
+    // The following default method makes it into an internal iterator.
+    
+    // Almost like fmap, but loses structure.
+    // Consumer<T>  ≅ Function<T,void>.
+    default void iterate(java.util.function.Consumer consumer)
+    {
+	while(this.hasNext())
+	    consumer.accept(this.next());
+    }
+}
+#+END_SRC
+
+The first two pieces above form an “external iterator” since it lets the client control
+iteration by calling ~next() and hasNext()~. An “internal iterator” controls iteration
+itself and the client has to tell it how to process the elements as it goes through them.
+In some sense the internal iterators are easier to use since we just hand them an operation
+and they do all the work of actually iterating themselves. The former necessitiaes the boilerplate
+of ~iterate~.
+
+#+LaTeX: \vspace{1em}
+
+Either way, programming to an interface allows more polymorphic code.
+
+#+LaTeX: \vspace{1em}
+
++ Single Responsibility Principle :: A class should have only one reason to change.
+
+  Every responsibility of a class is an area of potential change. 
+  More than one responsibility means more than one area of change.
+* Conclusion
+
+# We have shown that two advanced language features — higherorder
+# functions and datatype genericity — suffice (in the presence
+# of other standard features such as datatypes and interfaces) to capture
+# as reusable code a number of the familiar GOF design patterns.
+# 
+# Our intentions in doing this work are not so much to criticize
+# the existing informal presentations of these four and other patterns.
+# 
+# 
+Hopefully this work promotes the uptake of higher-order and datatype-generic techniques,
+and to encourage their incorporation in mainstream programming languages.
+
+#+BEGIN_CENTER 
+#+LaTeX: \textbf{\emph{Design patterns are invisible or simple using functional programming features!}}
+#+END_CENTER
+#
+# /In general, design patterns amount to admissions of inexpressiveness in a language!/
+#
+#  However, in contrast to Norvig and the others favouring
+# dynamic languages [43], our presentation provides genericity while
+# preserving strong static typing.
+
+
++ How to capture creational design patterns as higher-order datatype-generic programs?
+
+   # This is perhaps because our approach
+   # is to model object-oriented ideas in a functional framework,
+   # and that framework has no direct analogue of object creation. 
+
++ Design patterns are traditionally expressed informally, using prose,
+  pictures and prototypes. In this paper we have argued that, given the
+  right language features, certain patterns at least could be expressed
+  more usefully as reusable library code. 
+
+#
+# + The necessary features are familiar to functional programmers; 
+#  we *hope* to see them soon in more mainstream programming languages.
+
+
+      
+
+* COMMENT Hylos
+
+Turning to GOF’s computing builders, with lazy evaluation
+there is not so pressing a need to fuse building with postprocessing.
+If the structure of the consumer computation matches that of
+the producer — in particular, if the consumer is a fold and the producer
+a build or an unfold — then consumption can be interleaved
+with production, and the whole product never need be in existence.
+
+Nevertheless, naive interleaving of production and consumption
+of parts of the product still involves the creation and immediate
+disposal of those parts. Even the individual parts need never
+be constructed; often, they can be deforested [46], with the attributes
+of a part being fed straight into the consumption process.
+When the producer is an unfold, the composition of producer and
+consumer is (under certain mild strictness conditions) a hylomorphism.
+
+#+BEGIN_SRC haskell
+hylo ::Bifunctor s ⇒ (b → s a b) → (s a c → c) → b → c
+hylo f g = g · bimap id (hylo f g)· f
+#+END_SRC
+
+Once again, both definitions are datatype-generic; both take as
+arguments a producer f and a consumer g, both with types
+parametrized by the shape s of the product to be built. Note especially
+that in both cases, the fusion requires no creativity; in contrast,
+GOF’s computing builders can take considerable insight and
+ingenuity to program (as we shall see in the appendix).
+
+* COMMENT TODO Example
+
+#+BEGIN_SRC haskell
+data DocF a b = Paragraph a | Sec {title :: String, body :: List b}
+type Doc = Fix DocF String
+
+-- Ignoring the title, DocF can be relabelled to obtain:
+-- Also c.f. XML datatype
+
+data Hierarchy a b = Leaf a | Children (List b)
+-- A file system is a hierarchy of folders that each contain files  [of type a] or other folders  [of type b].
+
+type Tree = Fix Hierarchy String
+{-
+≅  Hierachy String (Fix Hierarchy String)
+≅  Leaf String | Children (List (Fix Hierarchy String))
+≅  Leaf String | Children (List ( Hierachy String (Fix Hierarchy String) ))
+≅  Leaf String | Children (List ( Leaf String | Children (List (Fix Hierarchy String)) ))
+-}
+
+instance Bifunctor Hierarchy where
+  bimap f g (Leaf x)      = Leaf (f x)
+  bimap f g (Children xs) = Children (map g xs)
+
+-- That above was the composite pattern!
+
+-- Instance of iterator:
+stringify :: Show a => Tree a -> Tree String
+stringify = map show
+
+-- Preorder traversal; i.e., root then children left to right; each recurisvely, respectively.
+-- instance of Vistor pattern
+preorder :: Tree a -> [a]
+preorder = fold combine
+--
+-- UNIT TEST THIS!
+--
+combine :: Hierarchy a [a] -> [a]
+combine (Item x)      = [x]
+combine (children xs) = concat xs
+
+-- get example of unfold for rose trees ◈ Builder
+
+-- get example of hylo for rose trees  ◈ Builder
+
+
+#+END_SRC
+
+* COMMENT The Sun says Hello
+  
+hello, friend :-)
+
++ What are `irregularly' assembled structures? --see section 4.4 for example.
+
+* COMMENT newpage                                                    :ignore:
+  \newpage
+
+* COMMENT footer
+
+(find-file "CheatSheet.el")
+
+# Local Variables:
+# eval: (org-babel-tangle)
+# eval: (load-file "CheatSheet.el")
+# compile-command: (my-org-latex-export-to-pdf)
+# End:

@@ -1,0 +1,141 @@
+#+TITLE: ``Design Patterns as Higher-Order Datatype-Generic Programs''
+#+SUBTITLE: Pop Quiz
+# DATE: << Spring 2018 >>
+# When we don't provide a date, one is provided for us.
+#+AUTHOR: [[http://www.cas.mcmaster.ca/~alhassm/][Musa Al-hassy]] 
+#+EMAIL: alhassy@gmail.com
+#+DESCRIPTION: This document is written by Musa Al-hassy for his learning in the spring of 2018.
+#+STARTUP: hideblocks
+#+STARTUP: overview
+#+TODO: BEGIN-IGNORE(b) END-IGNORE(e) } | DONE(d)
+#+INCLUDE: ~/Dropbox/MyUnicodeSymbols.org
+#+INCLUDE: CheatSheet/CheatSheetSetup.org
+
+* Repo link :ignore:
+
+\vspace{-7.5em}
+\hspace{8em}
+#+begin_tiny
+  https://github.com/alhassy/design-patterns-higher-order
+#+end_tiny
+\vspace{8em}
+
+* Terminology
+
+Define the following terms:
+
++ Design pattern ::
+
+  #+LaTeX: \vspace{3em}
+
++ Higher-order :: ?
+
+  #+LaTeX: \vspace{3em}
+
++ Datatype-generic :: ?
+
+  #+LaTeX: \vspace{3em}
+
+* Iterators
+
+Given the following
+
+#+BEGIN_SRC java
+interface Iterator<T> {
+    boolean hasNext();    // Are there more elements to iterate over?
+    T       next();       // Actually obtain the next element of type T.
+#+END_SRC
+
+Implement a method to process elements,
+
+#+BEGIN_SRC java
+default void iterate(java.util.function.Consumer consumer)
+{
+
+
+
+
+
+
+
+
+
+
+
+}
+#+END_SRC
+
+
+\newpage
+
+* ~Either~
+
+Given
+#+BEGIN_SRC java
+public class Either<A,B>
+{
+    private A left;
+    private B right;
+    
+    private static enum Location {LEFT, RIGHT};
+    private Location tag;
+
+    public<R> R Match(Function<A,R> f, Function<B,R> g)
+    {
+	if (this.tag == Location.LEFT)
+	    return f.apply(left);
+	else
+	    return g.apply(right);
+    }
+}
+#+END_SRC
+
+Implement an iterator,
+
+#+BEGIN_SRC java
+class EitherIterator implements Iterator{
+
+
+
+
+
+
+
+    public boolean hasNext(){ 
+
+
+
+
+
+
+
+
+    }
+
+
+    public Object  next(){ 
+
+   
+
+
+
+
+
+
+    }
+}
+
+#+END_SRC
+
+Hint the latter two can be defined as one-liners ;-)
+
+
+* COMMENT footer
+
+(find-file "CheatSheet.el")
+
+# Local Variables:
+# eval: (org-babel-tangle)
+# eval: (load-file "CheatSheet.el")
+# compile-command: (my-org-latex-export-to-pdf)
+# End:
